@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw Logos From Memory</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Space Mono', monospace;
+        }
+
+        body {
+            min-height: 100vh;
+            padding: 20px;
+            background: #ffffff;
+            color: #333;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Background Circles */
+        .background-circles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            overflow: hidden;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(229, 229, 229, 0.145);
+        }
+
+        .circle:nth-child(1) {
+            width: 300px;
+            height: 300px;
+            top: 10%;
+            left: -100px;
+        }
+
+        .circle:nth-child(2) {
+            width: 200px;
+            height: 200px;
+            top: 60%;
+            right: -50px;
+        }
+
+        .circle:nth-child(3) {
+            width: 150px;
+            height: 150px;
+            bottom: -50px;
+            left: 30%;
+        }
+
+        /* Checkered Background */
+        #background-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+            background-image: 
+                linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+                linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+                linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+
+        .brand {
+            text-align: center;
+            padding: 15px;
+            font-size: 14px;
+            color: #333;
+            letter-spacing: 2px;
+            opacity: 0.5;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 40px;
+            margin-bottom: 10px;
+            font-size: 32px;
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 40px;
+            letter-spacing: 1px;
+        }
+
+        .logo-prompt {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .drawing-container {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .left-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .canvas-wrapper {
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08),
+                        0 8px 16px rgba(0, 0, 0, 0.06);
+            width: 320px;
+            height: 320px;
+        }
+
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: crosshair;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .color-palette {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08),
+                        0 8px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        .color-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1),
+                        0 2px 4px rgba(0, 0, 0, 0.1),
+                        inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        /* Special handling for white color button */
+        .color-btn[style*="background-color: #FFFFFF"],
+        .color-btn[style*="background-color: rgb(255, 255, 255)"] {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1),
+                        0 2px 4px rgba(0, 0, 0, 0.1),
+                        inset 0 0 0 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .color-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15),
+                        0 3px 6px rgba(0, 0, 0, 0.1),
+                        inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+        }
+
+        .color-btn.active {
+            border: 3px solid #333;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15),
+                        0 2px 4px rgba(0, 0, 0, 0.1),
+                        inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+        }
+
+        .right-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 320px;
+            height: 320px;
+            position: relative;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08),
+                        0 8px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        .reveal-btn {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-family: 'Space Mono', monospace;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15),
+                        0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .reveal-btn:hover {
+            transform: translate(-50%, -52%);
+            background: #444;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2),
+                        0 3px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .logo-image {
+        display: none;
+        width: 300px;
+        height: 300px;
+        object-fit: contain;
+        border-radius: 5px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12),
+                    0 8px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .separator {
+            width: 100%;
+            max-width: 800px;
+            height: 1px;
+            background: linear-gradient(to right, transparent, #ddd, transparent);
+            margin: 40px auto;
+        }
+
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 24px;
+                margin-top: 30px;
+            }
+
+            .subtitle {
+                font-size: 14px;
+                margin-bottom: 30px;
+                padding: 0 15px;
+            }
+
+            .logo-prompt {
+                font-size: 16px;
+            }
+
+            .drawing-container {
+                flex-direction: column;
+                gap: 20px;
+                align-items: center;
+            }
+
+            .left-section {
+                width: 100%;
+                max-width: 320px;
+            }
+
+            .right-section {
+                width: 100%;
+                max-width: 320px;
+            }
+
+            .canvas-wrapper {
+                width: 100%;
+                height: auto;
+            }
+
+            canvas {
+                width: 100%;
+                height: auto;
+            }
+
+            .color-palette {
+                flex-wrap: wrap;
+                padding: 10px;
+            }
+
+            .color-btn {
+                width: 35px;
+                height: 35px;
+            }
+
+            .logo-image {
+                width: 100%;
+                height: auto;
+            }
+
+            .separator {
+                margin: 30px auto;
+            }
+
+            .brand {
+                font-size: 12px;
+                padding: 10px;
+            }
+        }
+
+        @media screen and (max-width: 380px) {
+            h1 {
+                font-size: 20px;
+                padding: 0 10px;
+            }
+
+            .subtitle {
+                font-size: 12px;
+            }
+
+            .logo-prompt {
+                font-size: 14px;
+            }
+
+            .color-btn {
+                width: 30px;
+                height: 30px;
+            }
+
+            .reveal-btn {
+                padding: 12px 24px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <audio id="background-music" loop>
+        <source src="background.mp3" type="audio/mp3">
+    </audio>
+
+    <div class="background-circles">
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+    </div>
+    <div id="background-pattern"></div>
+    <div class="brand">alvin.fun</div>
+    <h1>🎨 Draw Logos From Memory</h1>
+    <div class="subtitle">Well, you use them often, but do you remember the logos? 🤭</div>
+
+    <!-- McDonalds Section -->
+    <div class="logo-section">
+        <div class="logo-prompt">Draw the McDonalds logo</div>
+        <div class="drawing-container">
+            <div class="left-section">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-0" width="300" height="300"></canvas>
+                </div>
+                <div class="color-palette" id="palette-0"></div>
+            </div>
+            <div class="right-section">
+                <button class="reveal-btn" id="reveal-0">Reveal Logo</button>
+                <img id="image-0" class="logo-image" src="images/mcdonalds.jpg">
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <!-- YouTube Section -->
+    <div class="logo-section">
+        <div class="logo-prompt">Draw the Nike logo</div>
+        <div class="drawing-container">
+            <div class="left-section">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-1" width="300" height="300"></canvas>
+                </div>
+                <div class="color-palette" id="palette-1"></div>
+            </div>
+            <div class="right-section">
+                <button class="reveal-btn" id="reveal-1">Reveal Logo</button>
+                <img id="image-1" class="logo-image" src="images/nike.jpg">
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="logo-section">
+        <div class="logo-prompt">Draw the Adidas logo</div>
+        <div class="drawing-container">
+            <div class="left-section">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-2" width="300" height="300"></canvas>
+                </div>
+                <div class="color-palette" id="palette-2"></div>
+            </div>
+            <div class="right-section">
+                <button class="reveal-btn" id="reveal-2">Reveal Logo</button>
+                <img id="image-2" class="logo-image" src="images/adidas.jpg">
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="logo-section">
+        <div class="logo-prompt">Draw the Google logo</div>
+        <div class="drawing-container">
+            <div class="left-section">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-3" width="300" height="300"></canvas>
+                </div>
+                <div class="color-palette" id="palette-3"></div>
+            </div>
+            <div class="right-section">
+                <button class="reveal-btn" id="reveal-3">Reveal Logo</button>
+                <img id="image-3" class="logo-image" src="images/google.jpg">
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="logo-section">
+        <div class="logo-prompt">Draw the Youtube logo</div>
+        <div class="drawing-container">
+            <div class="left-section">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-4" width="300" height="300"></canvas>
+                </div>
+                <div class="color-palette" id="palette-4"></div>
+            </div>
+            <div class="right-section">
+                <button class="reveal-btn" id="reveal-4">Reveal Logo</button>
+                <img id="image-4" class="logo-image" src="images/youtube.jpg">
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="logo-section">
+        <div class="logo-prompt">Draw the Amazon logo</div>
+        <div class="drawing-container">
+            <div class="left-section">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-5" width="300" height="300"></canvas>
+                </div>
+                <div class="color-palette" id="palette-5"></div>
+            </div>
+            <div class="right-section">
+                <button class="reveal-btn" id="reveal-5">Reveal Logo</button>
+                <img id="image-5" class="logo-image" src="images/amazon.jpg">
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="logo-section">
+        <div class="logo-prompt">Draw the Apple logo</div>
+        <div class="drawing-container">
+            <div class="left-section">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-6" width="300" height="300"></canvas>
+                </div>
+                <div class="color-palette" id="palette-6"></div>
+            </div>
+            <div class="right-section">
+                <button class="reveal-btn" id="reveal-6">Reveal Logo</button>
+                <img id="image-6" class="logo-image" src="images/apple.jpg">
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="logo-section">
+        <div class="logo-prompt">Draw the Android logo</div>
+        <div class="drawing-container">
+            <div class="left-section">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-7" width="300" height="300"></canvas>
+                </div>
+                <div class="color-palette" id="palette-7"></div>
+            </div>
+            <div class="right-section">
+                <button class="reveal-btn" id="reveal-7">Reveal Logo</button>
+                <img id="image-7" class="logo-image" src="images/android.png">
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="logo-section">
+        <div class="logo-prompt">Draw the Spotify logo</div>
+        <div class="drawing-container">
+            <div class="left-section">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-8" width="300" height="300"></canvas>
+                </div>
+                <div class="color-palette" id="palette-8"></div>
+            </div>
+            <div class="right-section">
+                <button class="reveal-btn" id="reveal-8">Reveal Logo</button>
+                <img id="image-8" class="logo-image" src="images/spotify.png">
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="logo-section">
+        <div class="logo-prompt">Draw the Benz logo</div>
+        <div class="drawing-container">
+            <div class="left-section">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-9" width="300" height="300"></canvas>
+                </div>
+                <div class="color-palette" id="palette-9"></div>
+            </div>
+            <div class="right-section">
+                <button class="reveal-btn" id="reveal-9">Reveal Logo</button>
+                <img id="image-9" class="logo-image" src="images/benz.jpg">
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="logo-section">
+        <div class="logo-prompt">Draw the BMW logo</div>
+        <div class="drawing-container">
+            <div class="left-section">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-10" width="300" height="300"></canvas>
+                </div>
+                <div class="color-palette" id="palette-10"></div>
+            </div>
+            <div class="right-section">
+                <button class="reveal-btn" id="reveal-10">Reveal Logo</button>
+                <img id="image-10" class="logo-image" src="images/bmw.jpg">
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="logo-section">
+        <div class="logo-prompt">Draw the Snapchat logo</div>
+        <div class="drawing-container">
+            <div class="left-section">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-11" width="300" height="300"></canvas>
+                </div>
+                <div class="color-palette" id="palette-11"></div>
+            </div>
+            <div class="right-section">
+                <button class="reveal-btn" id="reveal-11">Reveal Logo</button>
+                <img id="image-11" class="logo-image" src="images/snapchat.png">
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="logo-section">
+        <div class="logo-prompt">Draw the Instagram logo</div>
+        <div class="drawing-container">
+            <div class="left-section">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas-12" width="300" height="300"></canvas>
+                </div>
+                <div class="color-palette" id="palette-12"></div>
+            </div>
+            <div class="right-section">
+                <button class="reveal-btn" id="reveal-12">Reveal Logo</button>
+                <img id="image-12" class="logo-image" src="images/instagram.jpg">
+            </div>
+        </div>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="subtitle">Logos in Memory, Creativity in Action! ✨<br>🖼️ Sketch Your Way Back Anytime!</div>
+
+    <script>
+        // Logo configurations
+        const logos = [
+            {
+                name: "McDonalds",
+                backgroundColor: "#FF0000",
+                colors: ["#FFC72C", "#FF0000", "#FFFFFF", "#000000"],
+                imageUrl: "images/mcdonalds.jpg"
+            },
+            {
+                name: "Nike",
+                backgroundColor: "#FFFFFF",
+                colors: ["#FFFFFF", "#000000"],
+                imageUrl: "images/nike.jpg"
+            },
+            {
+                name: "Adidas",
+                backgroundColor: "#FFFFFF",
+                colors: ["#FFFFFF", "#000000"],
+                imageUrl: "images/adidas.jpg"
+            },
+            {
+                name: "Google",
+                backgroundColor: "#FFFFFF",
+                colors: ["#F9BD05", "#FF0000", "#34A853", "#4387F6", "#FFFFFF", "#000000"],
+                imageUrl: "images/google.jpg"
+            },
+            {
+                name: "Youtube",
+                backgroundColor: "#FFFFFF",
+                colors: ["#FF0000", "#FFFFFF", "#000000"],
+                imageUrl: "images/youtube.jpg"
+            },
+            {
+                name: "Amazon",
+                backgroundColor: "#FFFFFF",
+                colors: ["#FD9800", "#FFFFFF", "#000000"],
+                imageUrl: "images/amazon.jpg"
+            },
+            {
+                name: "Apple",
+                backgroundColor: "#FFFFFF",
+                colors: ["#FFFFFF", "#000000"],
+                imageUrl: "images/apple.jpg"
+            },
+            {
+                name: "Android",
+                backgroundColor: "#FFFFFF",
+                colors: ["#A3C439", "#FFFFFF", "#000000"],
+                imageUrl: "images/android.png"
+            },
+            {
+                name: "Spotify",
+                backgroundColor: "#FFFFFF",
+                colors: ["#1ED760", "#FFFFFF", "#000000"],
+                imageUrl: "images/spotify.png"
+            },
+            {
+                name: "Benz",
+                backgroundColor: "#FFFFFF",
+                colors: ["#C9CDD0", "#FFFFFF", "#1D2B34"],
+                imageUrl: "images/benz.jpg"
+            },
+            {
+                name: "BMW",
+                backgroundColor: "#FFFFFF",
+                colors: ["#328BB7", "#FFFFFF", "#98A5AD", "#000000"],
+                imageUrl: "images/bmw.jpg"
+            },
+            {
+                name: "Snapchat",
+                backgroundColor: "#FFFFFF",
+                colors: ["#FFFC00", "#FFFFFF", "#000000"],
+                imageUrl: "images/snapchat.png"
+            },
+            {
+                name: "Instagram",
+                backgroundColor: "#FFFFFF",
+                colors: ["#FEB500", "#FC2626", "#FD03C9", "#870BF5", "#FFFFFF", "#000000"],
+                imageUrl: "images/instagram.jpg"
+            }
+        ];
+
+        const backgroundMusic = document.getElementById('background-music');
+        backgroundMusic.volume = 0.5; // 50% volume
+
+        // Start playing when user interacts with the page
+        document.addEventListener('click', () => {
+            backgroundMusic.play().catch(error => {
+                console.log("Audio play failed:", error);
+            });
+        }, { once: true }); // only attach the listener once
+
+        // Initialize each canvas section
+        logos.forEach((logo, index) => {
+            const canvas = document.getElementById(`canvas-${index}`);
+            const ctx = canvas.getContext('2d');
+            const colorPalette = document.getElementById(`palette-${index}`);
+            const revealBtn = document.getElementById(`reveal-${index}`);
+            const logoImage = document.getElementById(`image-${index}`);
+
+            let isDrawing = false;
+            let currentColor = logo.colors[0];
+
+            // Initialize canvas
+            ctx.fillStyle = logo.backgroundColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Create color palette
+            logo.colors.forEach(color => {
+                const button = document.createElement('button');
+                button.className = 'color-btn';
+                button.style.backgroundColor = color;
+                button.onclick = () => {
+                    currentColor = color;
+                    ctx.strokeStyle = color;
+                    colorPalette.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                };
+                colorPalette.appendChild(button);
+            });
+
+            // Set initial drawing properties
+            ctx.strokeStyle = currentColor;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            colorPalette.firstChild.classList.add('active');
+
+            // Drawing functions
+            function startDrawing(e) {
+                isDrawing = true;
+                draw(e);
+            }
+
+            function stopDrawing() {
+                isDrawing = false;
+                ctx.beginPath();
+            }
+
+            function draw(e) {
+                if (!isDrawing) return;
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+                const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+            }
+
+            // Event listeners for drawing
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+
+            // Reveal button listener
+            revealBtn.addEventListener('click', () => {
+                logoImage.style.display = 'block';
+                revealBtn.style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
