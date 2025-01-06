@@ -349,10 +349,6 @@
     </style>
 </head>
 <body>
-    <audio id="background-music" loop>
-        <source src="background.mp3" type="audio/mp3">
-    </audio>
-
     <div class="background-circles">
         <div class="circle"></div>
         <div class="circle"></div>
@@ -683,16 +679,6 @@
                 imageUrl: "images/instagram.jpg"
             }
         ];
-
-        const backgroundMusic = document.getElementById('background-music');
-        backgroundMusic.volume = 0.5; // 50% volume
-
-        // Start playing when user interacts with the page
-        document.addEventListener('click', () => {
-            backgroundMusic.play().catch(error => {
-                console.log("Audio play failed:", error);
-            });
-        }, { once: true }); // only attach the listener once
 
         // Initialize each canvas section
         logos.forEach((logo, index) => {
